@@ -19,6 +19,7 @@ jobs:
       - run: go get github.com/kelseyhightower/envconfig
       - run: go get github.com/stretchr/testify/assert
       - run: go get github.com/jstemmer/go-junit-report
+      - run: go get bou.ke/monkey
       - run:
           name: Run unit tests
           command: |

@@ -22,7 +22,7 @@ jobs:
 
       - run:
         name: Run unit tests
-        command: |-
+        command:
             trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
             go test | tee ${TEST_RESULTS}/go-test.out
 

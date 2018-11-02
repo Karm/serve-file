@@ -1,4 +1,5 @@
 # README - TODO
+[![CircleCI](https://circleci.com/gh/Karm/serve-file/tree/master.svg?style=svg)](https://circleci.com/gh/Karm/serve-file/tree/master)
 
 Works:
 go test

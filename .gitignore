@@ -1,0 +1,8 @@
+.vscode
+serve-file
+generated/trustchain/
+c.out
+coverage.html
+debug
+trace.out
+log.log

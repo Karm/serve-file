@@ -380,7 +380,7 @@ func TestUnknownCertClient(t *testing.T) {
 		[]string{"SRV_BIND_PORT", bindPort},
 		[]string{"SRV_BIND_HOST", "localhost"},
 	}
-	interaction(t, "unknown-client", []string{}, "SSL_ERROR_BAD_CERT_ALERT", "", props)
+	interaction(t, "unknown-client", []string{}, "alert bad certificate", "", props)
 }
 
 func TestOCSPRevokedClient(t *testing.T) {

@@ -154,7 +154,9 @@ function archive_certs() {
         done
     done
     cp trustchain/ca/index.txt ca/${PREFIX}index.txt
+    cp trustchain/ca/index.txt.attr ca/${PREFIX}index.txt.attr
     cp trustchain/ca/intermediate/index.txt ca/${PREFIX}intermediate-index.txt
+    cp trustchain/ca/intermediate/index.txt.attr ca/${PREFIX}intermediate-index.txt.attr
 }
 
 rm -rf trustchain ca client crl ocsp server

@@ -30,16 +30,24 @@ var (
 	testMutex             = &sync.Mutex{}
 )
 
-func waitForTCP(timeout time.Duration, addrPort string) {
+func waitForTCP(timeout time.Duration, addrPort string, connShouldFail bool) {
 	deadline := time.Now().Add(timeout)
 	var con net.Conn
 	var err error
 	for time.Now().Before(deadline) {
 		con, err = net.Dial("tcp", addrPort)
-		if err != nil {
-			time.Sleep(100 * time.Millisecond)
+		if connShouldFail {
+			if err != nil {
+				break
+			} else {
+				time.Sleep(100 * time.Millisecond)
+			}
 		} else {
-			break
+			if err != nil {
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				break
+			}
 		}
 	}
 	defer func() {
@@ -113,7 +121,7 @@ func startOCSPResponder(timeout time.Duration, ocspURL string, ocspCertName stri
 		"-rsigner",
 		fmt.Sprintf("certs/ocsp/certs/%s.cert.pem", ocspCertName),
 	}
-	ocspCMD := exec.Command("openssl", cmd...)
+	ocspCMD := exec.Command("./openssl", cmd...)
 	ocspCMD.Start()
 	return ocspCMD
 }
@@ -141,9 +149,10 @@ func interaction(t *testing.T, clientName string, headers []string, expectedHTTP
 			os.Setenv(prop[0], "")
 		}
 	}()
+	waitForTCP(30*time.Second, fmt.Sprintf("%s:%s", bindHost, bindPort), true)
 	go main()
 	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	waitForTCP(500*time.Millisecond, fmt.Sprintf("%s:%s", bindHost, bindPort))
+	waitForTCP(30*time.Second, fmt.Sprintf("%s:%s", bindHost, bindPort), false)
 	curl := []string{
 		fmt.Sprintf("https://%s:%s%s", bindHost, bindPort, apiURL),
 		"--cert",
@@ -194,7 +203,7 @@ func TestCorrectClientOCSP(t *testing.T) {
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
 	waitUntilZombieLeaves(80 * time.Second)
-	ocspCMD := startOCSPResponder(60*time.Second, "localhost:"+ocspPort, "ocsp", "ca-chain")
+	ocspCMD := startOCSPResponder(60*time.Second, ocspPort, "ocsp", "ca-chain")
 	defer ocspCMD.Process.Kill()
 	defer ocspCMD.Process.Signal(syscall.SIGINT)
 	waitForOCSP(30*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
@@ -225,11 +234,12 @@ func TestManyCorrectClients(t *testing.T) {
 			os.Setenv(prop[0], "")
 		}
 	}()
+	waitForTCP(30*time.Second, fmt.Sprintf("%s:%s", bindHost, bindPort), true)
 	go main()
 	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
-	waitForTCP(500*time.Millisecond, fmt.Sprintf("%s:%s", bindHost, bindPort))
+	waitForTCP(30*time.Second, fmt.Sprintf("%s:%s", bindHost, bindPort), false)
 	waitUntilZombieLeaves(80 * time.Second)
-	ocspCMD := startOCSPResponder(60*time.Second, "localhost:"+ocspPort, "ocsp", "ca-chain")
+	ocspCMD := startOCSPResponder(60*time.Second, ocspPort, "ocsp", "ca-chain")
 	defer ocspCMD.Process.Kill()
 	defer ocspCMD.Process.Signal(syscall.SIGINT)
 	waitForOCSP(30*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
@@ -386,7 +396,7 @@ func TestOCSPRevokedClient(t *testing.T) {
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
 	waitUntilZombieLeaves(80 * time.Second)
-	ocspCMD := startOCSPResponder(60*time.Second, "localhost:"+ocspPort, "ocsp", "ca-chain")
+	ocspCMD := startOCSPResponder(60*time.Second, ocspPort, "ocsp", "ca-chain")
 	defer ocspCMD.Process.Kill()
 	defer ocspCMD.Process.Signal(syscall.SIGINT)
 	waitForOCSP(30*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
@@ -406,7 +416,7 @@ func TestWrongOCSP(t *testing.T) {
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
 	waitUntilZombieLeaves(80 * time.Second)
-	ocspCMD := startOCSPResponder(60*time.Second, "localhost:"+ocspPort, "unknown-ocsp", "unknown-ca-chain")
+	ocspCMD := startOCSPResponder(60*time.Second, ocspPort, "unknown-ocsp", "unknown-ca-chain")
 	defer ocspCMD.Process.Kill()
 	defer ocspCMD.Process.Signal(syscall.SIGINT)
 	waitForOCSP(30*time.Second, "http://localhost:"+ocspPort, unknownCaCertFile, unknownClientCertFile)

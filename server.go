@@ -155,7 +155,7 @@ func main() {
 	go func(s *http.Server) {
 		sig := <-sigs
 		log.Println(sig)
-		if err := s.Shutdown(nil); err != nil {
+		if err := srv.Shutdown(nil); err != nil {
 			log.Fatal(err)
 		}
 		done <- true

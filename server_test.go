@@ -1,3 +1,19 @@
+/*
+Copyright (C) 2018  Michal Karm Babacek
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
 package main
 
 import (
@@ -174,6 +190,8 @@ func interaction(t *testing.T, clientName string, headers []string, expectedHTTP
 		"certs/ca/certs/ca-chain.cert.pem",
 		"-i",
 		"-v",
+		//	"-k",
+		//"--trace-ascii", fmt.Sprintf("/tmp/trace-%s", clientName),
 	}
 	dateCmd := exec.Command("curl", append(curl, headers...)...)
 	dateOut, err := dateCmd.CombinedOutput()
@@ -266,6 +284,8 @@ func TestManyCorrectClients(t *testing.T) {
 				"certs/ca/certs/ca-chain.cert.pem",
 				"-i",
 				"-v",
+				//"--trace-ascii", fmt.Sprintf("/tmp/trace-%d", clientNumber),
+				//"-k",
 			}
 			dateCmd := exec.Command("curl", append(curl, []string{fmt.Sprintf("-Hx-resolver-id: %d", clientNumber)}...)...)
 			dateOut, err := dateCmd.CombinedOutput()
@@ -277,6 +297,7 @@ func TestManyCorrectClients(t *testing.T) {
 			atomic.AddUint32(&doneRoutines, 1)
 		}(clientNumber)
 	}
+	// TODO: Use WaitGroup: htconnTerminated <- truetps://stackoverflow.com/questions/18207772/how-to-wait-for-all-goroutines-to-finish-without-using-time-sleep
 	for atomic.LoadUint32(&doneRoutines) < 149 {
 		log.Println("Waiting for all clients to complete.")
 		time.Sleep(500 * time.Millisecond)

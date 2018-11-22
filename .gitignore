@@ -6,3 +6,5 @@ coverage.html
 debug
 trace.out
 log.log
+glide.lock
+vendor/

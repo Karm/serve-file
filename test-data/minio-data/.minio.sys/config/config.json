@@ -1,0 +1,10 @@
+{
+    "version": "32",
+    "credential": {
+        "accessKey": "xxx",
+        "secretKey": "12345678",
+        "status": "enabled"
+    },
+    "region": "eu-west-1",
+    "worm": "off"
+}

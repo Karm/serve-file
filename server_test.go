@@ -27,7 +27,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -190,7 +189,7 @@ func interaction(t *testing.T, clientName string, headers []string, expectedHTTP
 		"certs/ca/certs/ca-chain.cert.pem",
 		"-i",
 		"-v",
-		//	"-k",
+		//"-k",
 		//"--trace-ascii", fmt.Sprintf("/tmp/trace-%s", clientName),
 	}
 	dateCmd := exec.Command("curl", append(curl, headers...)...)
@@ -235,7 +234,6 @@ func TestCorrectClientOCSP(t *testing.T) {
 		[]string{"SRV_API_FILE_DIR", "test-data"},
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
-	//waitUntilZombieLeaves(80 * time.Second)
 	ocspCMD := startOCSPResponder(ocspPort, "ocsp", "ca-chain")
 	defer stopOCSPResponder(ocspCMD)
 	waitForOCSP(5*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
@@ -267,13 +265,14 @@ func TestManyCorrectClients(t *testing.T) {
 	go main()
 	defer syscall.Kill(syscall.Getpid(), syscall.SIGINT)
 	waitForTCP(30*time.Second, fmt.Sprintf("%s:%s", bindHost, bindPort), false)
-	//waitUntilZombieLeaves(80 * time.Second)
 	ocspCMD := startOCSPResponder(ocspPort, "ocsp", "ca-chain")
 	defer stopOCSPResponder(ocspCMD)
 	waitForOCSP(5*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
-	var doneRoutines uint32
+	var wg sync.WaitGroup
 	for clientNumber := 401; clientNumber < 550; clientNumber++ {
+		wg.Add(1)
 		go func(clientNumber int) {
+			defer wg.Done()
 			curl := []string{
 				fmt.Sprintf("https://%s:%s%s", bindHost, bindPort, apiURL),
 				"--cert",
@@ -294,14 +293,10 @@ func TestManyCorrectClients(t *testing.T) {
 			expectedContent := fmt.Sprintf("Content-Length: %d", clientNumber)
 			assert.True(t, strings.Contains(out, expectedContent), fmt.Sprintf("\"%s\" substring not found in \"%s\".", expectedContent, out))
 			assert.True(t, strings.Contains(out, "HTTP/1.1 200"), fmt.Sprintf("\"%s\" substring not found in \"%s\".", "HTTP/1.1 200", out))
-			atomic.AddUint32(&doneRoutines, 1)
 		}(clientNumber)
 	}
-	// TODO: Use WaitGroup: htconnTerminated <- truetps://stackoverflow.com/questions/18207772/how-to-wait-for-all-goroutines-to-finish-without-using-time-sleep
-	for atomic.LoadUint32(&doneRoutines) < 149 {
-		log.Println("Waiting for all clients to complete.")
-		time.Sleep(500 * time.Millisecond)
-	}
+	log.Println("Waiting for all clients to complete.")
+	wg.Wait()
 }
 
 func TestCorrectClientCached(t *testing.T) {
@@ -424,7 +419,6 @@ func TestOCSPRevokedClient(t *testing.T) {
 		[]string{"SRV_API_URL", "/sinkit/rest/protostream/resolvercache/"},
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
-	//waitUntilZombieLeaves(80 * time.Second)
 	ocspCMD := startOCSPResponder(ocspPort, "ocsp", "ca-chain")
 	defer stopOCSPResponder(ocspCMD)
 	waitForOCSP(5*time.Second, "http://localhost:"+ocspPort, caCertFile, clientCertFile)
@@ -441,7 +435,6 @@ func TestWrongOCSP(t *testing.T) {
 		[]string{"SRV_API_URL", "/sinkit/rest/protostream/resolvercache/"},
 		[]string{"SRV_OCSP_URL", "http://localhost:" + ocspPort},
 	}
-	//waitUntilZombieLeaves(80 * time.Second)
 	ocspCMD := startOCSPResponder(ocspPort, "unknown-ocsp", "unknown-ca-chain")
 	defer stopOCSPResponder(ocspCMD)
 	waitForOCSP(5*time.Second, "http://localhost:"+ocspPort, unknownCaCertFile, unknownClientCertFile)

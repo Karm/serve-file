@@ -67,11 +67,22 @@ type Settings struct {
 
 	API_URL                     string
 	API_ID_REQ_HEADER           string
-	API_FILE_DIR                string
-	API_DATA_FILE_TEMPLATE      string
-	API_HASH_FILE_TEMPLATE      string
 	API_RSP_TRY_LATER_HTTP_CODE int
 	API_RSP_ERROR_HEADER        string
+
+	API_FILE_DIR           string
+	API_DATA_FILE_TEMPLATE string
+	API_HASH_FILE_TEMPLATE string
+
+	API_USE_S3              bool
+	S3_ENDPOINT             string
+	S3_ACCESS_KEY           string
+	S3_SECRET_KEY           string
+	S3_BUCKET_NAME          string
+	S3_DATA_FILE_TEMPLATE   string
+	S3_REGION               string
+	S3_GET_OBJECT_TIMEOUT_S uint16
+	S3_USE_OUR_CACERTPOOL   bool
 
 	serverKeyPair tls.Certificate
 	caCertPool    *x509.CertPool
@@ -228,18 +239,6 @@ func LoadSettings() Settings {
 		settings.API_ID_REQ_HEADER = "x-resolver-id"
 		log.Printf(MSG00030, settings.API_ID_REQ_HEADER)
 	}
-	if len(settings.API_FILE_DIR) == 0 {
-		settings.API_FILE_DIR = "/opt/sinkit/protobuf"
-		log.Printf(MSG00031, settings.API_FILE_DIR)
-	}
-	if len(settings.API_DATA_FILE_TEMPLATE) == 0 {
-		settings.API_DATA_FILE_TEMPLATE = "%s/%s_resolver_cache.bin"
-		log.Printf(MSG00032, settings.API_DATA_FILE_TEMPLATE)
-	}
-	if len(settings.API_HASH_FILE_TEMPLATE) == 0 {
-		settings.API_HASH_FILE_TEMPLATE = "%s/%s_resolver_cache.bin.md5"
-		log.Printf(MSG00033, settings.API_HASH_FILE_TEMPLATE)
-	}
 	if settings.API_RSP_TRY_LATER_HTTP_CODE <= 0 {
 		settings.API_RSP_TRY_LATER_HTTP_CODE = 466
 		log.Printf(MSG00034, settings.API_RSP_TRY_LATER_HTTP_CODE)
@@ -248,6 +247,47 @@ func LoadSettings() Settings {
 		settings.API_RSP_ERROR_HEADER = "X-error"
 		log.Printf(MSG00035, settings.API_RSP_ERROR_HEADER)
 	}
-
+	// S3 storage
+	if settings.API_USE_S3 {
+		log.Println(MSG00040)
+		if len(settings.S3_ENDPOINT) == 0 {
+			log.Fatal(MSG00042)
+		}
+		if len(settings.S3_ACCESS_KEY) == 0 {
+			log.Fatal(MSG00043)
+		}
+		if len(settings.S3_SECRET_KEY) == 0 {
+			log.Fatal(MSG00044)
+		}
+		if len(settings.S3_BUCKET_NAME) == 0 {
+			log.Fatal(MSG00045)
+		}
+		if len(settings.S3_REGION) == 0 {
+			log.Fatal(MSG00046)
+		}
+		if len(settings.S3_DATA_FILE_TEMPLATE) == 0 {
+			settings.S3_DATA_FILE_TEMPLATE = "%s_resolver_cache.bin"
+			log.Printf(MSG00047, settings.S3_DATA_FILE_TEMPLATE)
+		}
+		if settings.S3_GET_OBJECT_TIMEOUT_S == 0 {
+			settings.S3_GET_OBJECT_TIMEOUT_S = 60
+			log.Printf(MSG00034, settings.S3_GET_OBJECT_TIMEOUT_S)
+		}
+	} else {
+		// Local filesystem
+		log.Println(MSG00041)
+		if len(settings.API_FILE_DIR) == 0 {
+			settings.API_FILE_DIR = "/opt/sinkit/protobuf"
+			log.Printf(MSG00031, settings.API_FILE_DIR)
+		}
+		if len(settings.API_DATA_FILE_TEMPLATE) == 0 {
+			settings.API_DATA_FILE_TEMPLATE = "%s/%s_resolver_cache.bin"
+			log.Printf(MSG00032, settings.API_DATA_FILE_TEMPLATE)
+		}
+		if len(settings.API_HASH_FILE_TEMPLATE) == 0 {
+			settings.API_HASH_FILE_TEMPLATE = "%s/%s_resolver_cache.bin.md5"
+			log.Printf(MSG00033, settings.API_HASH_FILE_TEMPLATE)
+		}
+	}
 	return settings
 }

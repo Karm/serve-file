@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	minio "github.com/minio/minio-go"
 )
 
 const version = "1.0.0"
@@ -88,41 +91,93 @@ func createServer(settings *Settings) *http.Server {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
-		pathToDataFile := fmt.Sprintf(
-			settings.API_DATA_FILE_TEMPLATE,
-			settings.API_FILE_DIR,
-			idFromCertStr,
-		)
-		// We do not read the file in memory, just metadata to check it exists.
-		_, err = os.Stat(pathToDataFile)
-		if err != nil {
-			log.Printf(RSL00008, pathToDataFile, idFromCert)
-			w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00008)
-			w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
-			return
+
+		if settings.API_USE_S3 {
+			objectName := fmt.Sprintf(settings.S3_DATA_FILE_TEMPLATE, idFromCertStr)
+			s3Client, err := minio.NewWithRegion(settings.S3_ENDPOINT, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, true, settings.S3_REGION)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if settings.S3_USE_OUR_CACERTPOOL {
+				tr := &http.Transport{
+					TLSClientConfig:    &tls.Config{RootCAs: settings.caCertPool},
+					DisableCompression: true,
+				}
+				s3Client.SetCustomTransport(tr)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(settings.S3_GET_OBJECT_TIMEOUT_S)*time.Second)
+			defer cancel()
+			opts := minio.GetObjectOptions{}
+			// https://tools.ietf.org/html/rfc7232#section-3.2
+			opts.SetMatchETagExcept(r.Header.Get("If-None-Match"))
+			object, err := s3Client.GetObjectWithContext(ctx, settings.S3_BUCKET_NAME, objectName, opts)
+			if err != nil {
+				log.Printf(RSL00012, objectName, err.Error())
+				w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00011)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			objectInfo, err := object.Stat()
+			if err != nil {
+				errResp := minio.ToErrorResponse(err)
+				if errResp.StatusCode == 404 {
+					log.Printf(RSL00010, objectName, idFromCert)
+					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00010)
+					w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
+					return
+				} else if errResp.StatusCode == 0 {
+					log.Printf(RSL00013)
+					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00011)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				} else {
+					log.Printf(RSL00011, objectName, idFromCert, errResp.Code, errResp.Message)
+					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00011)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			}
+			// https://tools.ietf.org/html/rfc7232#section-2.3
+			w.Header().Set("ETag", objectInfo.ETag)
+			// time.Time{} -- disables Modified since. We use ETag instead.
+			http.ServeContent(w, r, objectName, time.Time{}, object)
+		} else {
+			pathToDataFile := fmt.Sprintf(
+				settings.API_DATA_FILE_TEMPLATE,
+				settings.API_FILE_DIR,
+				idFromCertStr,
+			)
+			// We do not read the file in memory, just metadata to check it exists.
+			_, err = os.Stat(pathToDataFile)
+			if err != nil {
+				log.Printf(RSL00008, pathToDataFile, idFromCert)
+				w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00008)
+				w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
+				return
+			}
+			pathToHashFile := fmt.Sprintf(
+				settings.API_HASH_FILE_TEMPLATE,
+				settings.API_FILE_DIR,
+				idFromCertStr,
+			)
+			// We do read the hash file at once, just 32 bytes...
+			hash, err := ioutil.ReadFile(pathToHashFile)
+			if err != nil {
+				log.Printf(RSL00009, pathToHashFile, idFromCert, pathToDataFile)
+				w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00009)
+				w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
+				return
+			}
+			etag := "\"" + string(hash) + "\"" // Well, we know the size of byte[], do we really need all those extra allocs?
+			// https://tools.ietf.org/html/rfc7232#section-2.3
+			w.Header().Set("ETag", etag)
+			// https://tools.ietf.org/html/rfc7232#section-3.2
+			if etag == r.Header.Get("If-None-Match") {
+				w.WriteHeader(http.StatusNotModified)
+				return
+			}
+			http.ServeFile(w, r, pathToDataFile)
 		}
-		pathToHashFile := fmt.Sprintf(
-			settings.API_HASH_FILE_TEMPLATE,
-			settings.API_FILE_DIR,
-			idFromCertStr,
-		)
-		// We do read the hash file at once, just 32 bytes...
-		hash, err := ioutil.ReadFile(pathToHashFile)
-		if err != nil {
-			log.Printf(RSL00009, pathToHashFile, idFromCert, pathToDataFile)
-			w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00009)
-			w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
-			return
-		}
-		etag := "\"" + string(hash) + "\"" // Well, we know the size of byte[], do we really need all those extra allocs?
-		// https://tools.ietf.org/html/rfc7232#section-2.3
-		w.Header().Set("ETag", etag)
-		// https://tools.ietf.org/html/rfc7232#section-3.2
-		if etag == r.Header.Get("If-None-Match") {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-		http.ServeFile(w, r, pathToDataFile)
 		return
 	})
 	tlsCfg := &tls.Config{
@@ -171,8 +226,10 @@ func main() {
 	go func(s *http.Server) {
 		sig := <-sigs
 		log.Println(sig)
-		if err := srv.Shutdown(nil); err != nil {
-			log.Fatal(err)
+		if srv != nil {
+			if err := srv.Shutdown(nil); err != nil {
+				log.Fatal(err)
+			}
 		}
 		done <- true
 	}(srv)

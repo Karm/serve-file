@@ -15,11 +15,9 @@ jobs:
           keys:
             - v1-pkg-cache
 
-      - run: go get golang.org/x/crypto/ocsp
-      - run: go get github.com/kelseyhightower/envconfig
-      - run: go get github.com/stretchr/testify/assert
-      - run: go get github.com/jstemmer/go-junit-report
-      - run: go get bou.ke/monkey
+      - run: curl https://glide.sh/get | sh
+      - run: glide install
+      - run: go get github.com/jstemmer/go-junit-report 
       - run:
           name: Run unit tests
           command: |

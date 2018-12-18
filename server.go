@@ -94,6 +94,7 @@ func createServer(settings *Settings) *http.Server {
 
 		if settings.API_USE_S3 {
 			objectName := fmt.Sprintf(settings.S3_DATA_FILE_TEMPLATE, idFromCertStr)
+			// TODO: Move client initialization elsewhere. It is wasteful to do it each time.
 			s3Client, err := minio.NewWithRegion(settings.S3_ENDPOINT, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, true, settings.S3_REGION)
 			if err != nil {
 				log.Fatal(err)

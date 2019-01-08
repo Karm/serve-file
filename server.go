@@ -134,6 +134,9 @@ func createServer(settings *Settings) *http.Server {
 					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00010)
 					w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
 					return
+				} else if errResp.StatusCode == 304 {
+					w.WriteHeader(http.StatusNotModified)
+					return
 				} else if errResp.StatusCode == 0 {
 					log.Printf(RSL00013)
 					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00011)

@@ -93,4 +93,6 @@ const (
 	RSL00011 string = "S3 error getting object %s for client CommonName %d. Code: `%s', Message: `%s'. Check bucket name. Client sent away."
 	RSL00012 string = "S3 error in client connection to get object %s, Error: `%s'. Client sent away."
 	RSL00013 string = "S3 connection failed very early. Check backend, check TLS to endpoint, check SRV_S3_USE_OUR_CACERTPOOL when testing."
+	RSP00014 string = "Fatal configuration error on the server side. Contact admin."
+	RSL00014 string = "Client sent away. Fatal MINIO S3 configuration Error: %s"
 )

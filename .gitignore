@@ -8,3 +8,4 @@ trace.out
 log.log
 glide.lock
 vendor/
+test-data/minio-data/.minio.sys/multipart/

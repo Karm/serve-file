@@ -95,9 +95,12 @@ func createServer(settings *Settings) *http.Server {
 		if settings.API_USE_S3 {
 			objectName := fmt.Sprintf(settings.S3_DATA_FILE_TEMPLATE, idFromCertStr)
 			// TODO: Move client initialization elsewhere. It is wasteful to do it each time.
-			s3Client, err := minio.NewWithRegion(settings.S3_ENDPOINT, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, true, settings.S3_REGION)
+			s3Client, err := minio.New(settings.S3_ENDPOINT, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, true)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf(RSL00014, err.Error())
+				w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00014)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			if settings.S3_USE_OUR_CACERTPOOL {
 				tr := &http.Transport{
@@ -111,6 +114,7 @@ func createServer(settings *Settings) *http.Server {
 			opts := minio.GetObjectOptions{}
 			// https://tools.ietf.org/html/rfc7232#section-3.2
 			opts.SetMatchETagExcept(r.Header.Get("If-None-Match"))
+			//s3Client.TraceOn(nil)
 			object, err := s3Client.GetObjectWithContext(ctx, settings.S3_BUCKET_NAME, objectName, opts)
 			if err != nil {
 				log.Printf(RSL00012, objectName, err.Error())

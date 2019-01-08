@@ -118,7 +118,7 @@ func createServer(settings *Settings) *http.Server {
 				//opts.SetMatchETagExcept(etag) <-- this is buggy, it sets ""etag"" and get 403 from proper S3 server. Passes with MINIO backend though.
 				opts.Set("If-None-Match", etag)
 			}
-			s3Client.TraceOn(nil)
+			//s3Client.TraceOn(nil)
 			object, err := s3Client.GetObjectWithContext(ctx, settings.S3_BUCKET_NAME, objectName, opts)
 			if err != nil {
 				log.Printf(RSL00012, objectName, err.Error())

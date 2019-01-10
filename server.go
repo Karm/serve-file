@@ -153,10 +153,15 @@ func createServer(settings *Settings) *http.Server {
 			// https://tools.ietf.org/html/rfc7232#section-2.3
 			w.Header().Set("ETag", objectInfo.ETag)
 			// time.Time{} -- disables Modified since. We use ETag instead.
+			var timestamp int64
 			if settings.AUDIT_LOG_DOWNLOADS {
-				log.Printf(RSL00015, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], objectName)
+				timestamp = time.Now().UnixNano()
+				log.Printf(RSL00015, timestamp, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], objectName)
 			}
 			http.ServeContent(w, r, objectName, time.Time{}, object)
+			if settings.AUDIT_LOG_DOWNLOADS {
+				log.Printf(RSL00016, timestamp, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], objectName)
+			}
 		} else {
 			pathToDataFile := fmt.Sprintf(
 				settings.API_DATA_FILE_TEMPLATE,
@@ -192,10 +197,15 @@ func createServer(settings *Settings) *http.Server {
 				w.WriteHeader(http.StatusNotModified)
 				return
 			}
+			var timestamp int64
 			if settings.AUDIT_LOG_DOWNLOADS {
-				log.Printf(RSL00015, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], pathToDataFile)
+				timestamp = time.Now().UnixNano()
+				log.Printf(RSL00015, timestamp, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], pathToDataFile)
 			}
 			http.ServeFile(w, r, pathToDataFile)
+			if settings.AUDIT_LOG_DOWNLOADS {
+				log.Printf(RSL00016, timestamp, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], pathToDataFile)
+			}
 		}
 		return
 	})
@@ -253,8 +263,11 @@ func main() {
 		sig := <-sigs
 		log.Println(sig)
 		if srv != nil {
+			if err := srv.Close(); err != nil {
+				log.Fatalf("Close error: %s", err.Error())
+			}
 			if err := srv.Shutdown(nil); err != nil {
-				log.Fatal(err)
+				log.Fatalf("Shutdown error: %s", err.Error())
 			}
 		}
 		done <- true

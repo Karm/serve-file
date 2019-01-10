@@ -95,4 +95,6 @@ const (
 	RSL00013 string = "S3 connection failed very early. Check backend, check TLS to endpoint, check SRV_S3_USE_OUR_CACERTPOOL when testing."
 	RSP00014 string = "Fatal configuration error on the server side. Contact admin."
 	RSL00014 string = "Client sent away. Fatal MINIO S3 configuration Error: %s"
+	RSL00015 string = "Client CommonName %d, Organization %s, download %s begins."
+	RSL00016 string = "Client CommonName %d, Organization %s, download %s ends."
 )

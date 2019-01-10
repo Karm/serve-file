@@ -63,8 +63,9 @@ type Settings struct {
 	IDLE_TIMEOUT_S        uint16
 	MAX_HEADER_BYTES      int
 
-	NUM_OF_CPUS    int
-	ENABLE_PROFILE bool
+	NUM_OF_CPUS         int
+	ENABLE_PROFILE      bool
+	AUDIT_LOG_DOWNLOADS bool
 
 	API_URL                     string
 	API_ID_REQ_HEADER           string

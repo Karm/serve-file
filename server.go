@@ -153,6 +153,9 @@ func createServer(settings *Settings) *http.Server {
 			// https://tools.ietf.org/html/rfc7232#section-2.3
 			w.Header().Set("ETag", objectInfo.ETag)
 			// time.Time{} -- disables Modified since. We use ETag instead.
+			if settings.AUDIT_LOG_DOWNLOADS {
+				log.Printf(RSL00015, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], objectName)
+			}
 			http.ServeContent(w, r, objectName, time.Time{}, object)
 		} else {
 			pathToDataFile := fmt.Sprintf(
@@ -188,6 +191,9 @@ func createServer(settings *Settings) *http.Server {
 			if etag == r.Header.Get("If-None-Match") {
 				w.WriteHeader(http.StatusNotModified)
 				return
+			}
+			if settings.AUDIT_LOG_DOWNLOADS {
+				log.Printf(RSL00015, idFromCert, r.TLS.VerifiedChains[0][0].Subject.Organization[0], pathToDataFile)
 			}
 			http.ServeFile(w, r, pathToDataFile)
 		}

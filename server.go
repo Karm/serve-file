@@ -24,6 +24,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strconv"
@@ -130,7 +131,7 @@ func createServer(settings *Settings) *http.Server {
 			if err != nil {
 				errResp := minio.ToErrorResponse(err)
 				if errResp.StatusCode == 404 {
-					log.Printf(RSL00010, objectName, idFromCert)
+					log.Printf(RSL00010, objectName, idFromCert, r.TLS.VerifiedChains[0][0].Subject.String())
 					w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00010)
 					w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
 					return
@@ -162,7 +163,7 @@ func createServer(settings *Settings) *http.Server {
 			// We do not read the file in memory, just metadata to check it exists.
 			_, err = os.Stat(pathToDataFile)
 			if err != nil {
-				log.Printf(RSL00008, pathToDataFile, idFromCert)
+				log.Printf(RSL00008, pathToDataFile, idFromCert, r.TLS.VerifiedChains[0][0].Subject.String())
 				w.Header().Set(settings.API_RSP_ERROR_HEADER, RSP00008)
 				w.WriteHeader(settings.API_RSP_TRY_LATER_HTTP_CODE)
 				return
@@ -224,6 +225,13 @@ func main() {
 	done := make(chan bool, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	settings := LoadSettings()
+
+	if settings.ENABLE_PROFILE {
+		go func() {
+			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+		}()
+	}
+
 	srv := createServer(&settings)
 	l, err := net.Listen("tcp", srv.Addr)
 	if err != nil {

@@ -32,7 +32,7 @@ LABEL Author="Michal Karm Babacek <karm@email.cz"
 RUN useradd -s /sbin/nologin serveit
 RUN mkdir -p /opt/serveit && chown serveit /opt/serveit && chgrp serveit /opt/serveit && chmod ug+rwxs /opt/serveit
 WORKDIR /opt/serveit/
-EXPOSE 443/tcp
+EXPOSE 443/tcp 6060/tcp
 USER serveit
 COPY --from=build-env /gopath/src/github.com/Karm/serve-file/serve-file /opt/serveit/
 CMD ["/opt/serveit/serve-file"]

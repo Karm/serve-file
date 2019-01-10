@@ -63,7 +63,8 @@ type Settings struct {
 	IDLE_TIMEOUT_S        uint16
 	MAX_HEADER_BYTES      int
 
-	NUM_OF_CPUS int
+	NUM_OF_CPUS    int
+	ENABLE_PROFILE bool
 
 	API_URL                     string
 	API_ID_REQ_HEADER           string
@@ -270,8 +271,8 @@ func LoadSettings() Settings {
 			log.Printf(MSG00047, settings.S3_DATA_FILE_TEMPLATE)
 		}
 		if settings.S3_GET_OBJECT_TIMEOUT_S == 0 {
-			settings.S3_GET_OBJECT_TIMEOUT_S = 60
-			log.Printf(MSG00034, settings.S3_GET_OBJECT_TIMEOUT_S)
+			settings.S3_GET_OBJECT_TIMEOUT_S = 180
+			log.Printf(MSG00048, settings.S3_GET_OBJECT_TIMEOUT_S)
 		}
 	} else {
 		// Local filesystem

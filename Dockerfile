@@ -11,7 +11,7 @@ LABEL Author="Michal Karm Babacek <karm@email.cz"
 ENV GOPATH /gopath
 ENV PROJECT_DIR ${GOPATH}/src/github.com/Karm/serve-file/
 ENV PATH ${PATH}:/opt/go/bin/:/opt/linux-amd64/
-ENV GO_VERSION 1.11.2
+ENV GO_VERSION 1.11.4
 ENV GLIDE_VERSION 0.13.2
 WORKDIR /opt
 RUN dnf install git gcc -y
@@ -32,7 +32,7 @@ LABEL Author="Michal Karm Babacek <karm@email.cz"
 RUN useradd -s /sbin/nologin serveit
 RUN mkdir -p /opt/serveit && chown serveit /opt/serveit && chgrp serveit /opt/serveit && chmod ug+rwxs /opt/serveit
 WORKDIR /opt/serveit/
-EXPOSE 443/tcp 6060/tcp
+EXPOSE 8443/tcp 6060/tcp
 USER serveit
 COPY --from=build-env /gopath/src/github.com/Karm/serve-file/serve-file /opt/serveit/
 CMD ["/opt/serveit/serve-file"]

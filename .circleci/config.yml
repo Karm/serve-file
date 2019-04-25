@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.11.1
+      - image: circleci/golang:1.12.4
     working_directory: /go/src/github.com/Karm/serve-file
     environment:
       TEST_RESULTS: /tmp/test-results
@@ -22,7 +22,7 @@ jobs:
           name: Run unit tests
           command: |
             trap "go-junit-report <${TEST_RESULTS}/go-test.out > ${TEST_RESULTS}/go-test-report.xml" EXIT
-            go test | tee ${TEST_RESULTS}/go-test.out
+            for t in `find -name "*.go" ! -path '*/vendor/*' | xargs grep "func Test" | sed 's/.*func \([a-zA-Z]*\).*/\1/g'`;do go test -timeout 180s -v -run $t 2>&1 | tee -a ${TEST_RESULTS}/go-test.out;killall openssl;done
 
       - store_artifacts:  
           path: /tmp/test-results

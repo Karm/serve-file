@@ -72,7 +72,7 @@ func cleanMinioTmpFiles() {
 	}
 }
 
-func uploadResolverFiles(resolverIds []uint16) {
+func uploadResolverFiles(dataFiles []string) {
 	s3Client, err := minioClient.NewWithRegion(testEndpoint, testAccessKeyID, testSecretAccessKey, true, testRegion)
 	if err != nil {
 		log.Fatal(err)
@@ -113,9 +113,9 @@ func uploadResolverFiles(resolverIds []uint16) {
 	}
 	log.Println("Bucket Created...")
 
-	for _, id := range resolverIds {
-		objectName := fmt.Sprintf("%d_resolver_cache.bin", id)
-		filePath := fmt.Sprintf("test-data/%d_resolver_cache.bin", id)
+	for _, datafile := range dataFiles {
+		objectName := datafile
+		filePath := fmt.Sprintf("test-data/%s", datafile)
 		n, err := s3Client.FPutObjectWithContext(
 			ctx, testBucketName, objectName, filePath, minioClient.PutObjectOptions{ContentType: contentType})
 		if err != nil {
@@ -133,7 +133,12 @@ func TestCorrectClientWithS3(t *testing.T) {
 	log.Println("Gonna wait 5s for startup...")
 	time.Sleep(5000 * time.Millisecond)
 
-	uploadResolverFiles([]uint16{401, 402, 403, 404})
+	uploadResolverFiles([]string{
+		"401_resolver_cache.bin",
+		"402_resolver_cache.bin",
+		"403_resolver_cache.bin",
+		"403_resolver_cache_v3.bin",
+		"404_resolver_cache.bin"})
 
 	apiURL := "/sinkit/rest/protostream/resolvercache/"
 	props := [][]string{
@@ -191,6 +196,15 @@ func TestCorrectClientWithS3(t *testing.T) {
 	assert.Equal(t, err, nil)
 	out := string(dateOut)
 	expectedContent := fmt.Sprintf("Content-Length: %d", clientNumber)
+	assert.True(t, strings.Contains(out, expectedContent), fmt.Sprintf("\"%s\" substring not found in \"%s\".", expectedContent, out))
+	assert.True(t, strings.Contains(out, "HTTP/1.1 200"), fmt.Sprintf("\"%s\" substring not found in \"%s\".", "HTTP/1.1 200", out))
+
+	dateCmd = exec.Command("curl", append(curl, []string{"-Hx-version: v3", fmt.Sprintf("-Hx-resolver-id: %d", clientNumber)}...)...)
+	dateOut, err = dateCmd.CombinedOutput()
+	assert.Equal(t, err, nil)
+	out = string(dateOut)
+	// Note:  as a matter of test convenience, the _v3 file is 10 times bigger than the default file.
+	expectedContent = fmt.Sprintf("Content-Length: %d", clientNumber*10)
 	assert.True(t, strings.Contains(out, expectedContent), fmt.Sprintf("\"%s\" substring not found in \"%s\".", expectedContent, out))
 	assert.True(t, strings.Contains(out, "HTTP/1.1 200"), fmt.Sprintf("\"%s\" substring not found in \"%s\".", "HTTP/1.1 200", out))
 }

@@ -93,8 +93,13 @@ func createServer(settings *Settings) *http.Server {
 			return
 		}
 
+		version := strings.Trim(r.Header.Get(settings.API_VERSION_REQ_HEADER), " ")
+		if len(version) > 0 {
+			version = fmt.Sprintf("_%s", version)
+		}
+
 		if settings.API_USE_S3 {
-			objectName := fmt.Sprintf(settings.S3_DATA_FILE_TEMPLATE, idFromCertStr)
+			objectName := fmt.Sprintf(settings.S3_DATA_FILE_TEMPLATE, idFromCertStr, version)
 			// TODO: Move client initialization elsewhere. It is wasteful to do it each time.
 			s3Client, err := minio.New(settings.S3_ENDPOINT, settings.S3_ACCESS_KEY, settings.S3_SECRET_KEY, true)
 			if err != nil {
@@ -167,6 +172,7 @@ func createServer(settings *Settings) *http.Server {
 				settings.API_DATA_FILE_TEMPLATE,
 				settings.API_FILE_DIR,
 				idFromCertStr,
+				version,
 			)
 			// We do not read the file in memory, just metadata to check it exists.
 			_, err = os.Stat(pathToDataFile)

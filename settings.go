@@ -69,6 +69,7 @@ type Settings struct {
 
 	API_URL                     string
 	API_ID_REQ_HEADER           string
+	API_VERSION_REQ_HEADER      string
 	API_RSP_TRY_LATER_HTTP_CODE int
 	API_RSP_ERROR_HEADER        string
 
@@ -241,6 +242,10 @@ func LoadSettings() Settings {
 		settings.API_ID_REQ_HEADER = "x-resolver-id"
 		log.Printf(MSG00030, settings.API_ID_REQ_HEADER)
 	}
+	if len(settings.API_VERSION_REQ_HEADER) == 0 {
+		settings.API_VERSION_REQ_HEADER = "x-version"
+		log.Printf(MSG00030, settings.API_VERSION_REQ_HEADER)
+	}
 	if settings.API_RSP_TRY_LATER_HTTP_CODE <= 0 {
 		settings.API_RSP_TRY_LATER_HTTP_CODE = 466
 		log.Printf(MSG00034, settings.API_RSP_TRY_LATER_HTTP_CODE)
@@ -268,7 +273,7 @@ func LoadSettings() Settings {
 			log.Fatal(MSG00046)
 		}
 		if len(settings.S3_DATA_FILE_TEMPLATE) == 0 {
-			settings.S3_DATA_FILE_TEMPLATE = "%s_resolver_cache.bin"
+			settings.S3_DATA_FILE_TEMPLATE = "%s_resolver_cache%s.bin"
 			log.Printf(MSG00047, settings.S3_DATA_FILE_TEMPLATE)
 		}
 		if settings.S3_GET_OBJECT_TIMEOUT_S == 0 {
@@ -283,7 +288,7 @@ func LoadSettings() Settings {
 			log.Printf(MSG00031, settings.API_FILE_DIR)
 		}
 		if len(settings.API_DATA_FILE_TEMPLATE) == 0 {
-			settings.API_DATA_FILE_TEMPLATE = "%s/%s_resolver_cache.bin"
+			settings.API_DATA_FILE_TEMPLATE = "%s/%s_resolver_cache%s.bin"
 			log.Printf(MSG00032, settings.API_DATA_FILE_TEMPLATE)
 		}
 		if len(settings.API_HASH_FILE_TEMPLATE) == 0 {

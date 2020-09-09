@@ -1,3 +1,6 @@
+# Moved over here: https://github.com/whalebone/serve-file
+
+
 # README
 [![CircleCI](https://circleci.com/gh/Karm/serve-file/tree/master.svg?style=svg)](https://circleci.com/gh/Karm/serve-file/tree/master)
 
